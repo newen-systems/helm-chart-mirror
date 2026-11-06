@@ -1,0 +1,7 @@
+# <repo-url> <chart> [<semver-constraint>]
+# The newest KEEP_VERSIONS stable versions that match the constraint are mirrored to
+# ghcr.io/<owner>/charts/<chart>. A chart's repo URL is on its Artifact Hub page,
+# under INSTALL ("helm repo add <name> <url>").
+https://charts.rook.io/release rook-ceph
+https://charts.rook.io/release rook-ceph-cluster
+https://charts.jetstack.io cert-manager
