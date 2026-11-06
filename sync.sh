@@ -4,17 +4,25 @@
 # Reads charts.txt, one "<repo-url> <chart> [<semver-constraint>]" per line. For
 # each chart the newest KEEP_VERSIONS stable versions that match the constraint
 # are pushed when missing, and package versions outside that set are deleted.
+# Each download is checked against the digest in the upstream index before the
+# push, every kept version on ghcr.io is re-checked on every run, and a
+# publisher's .prov signature is copied when one exists. Verified manifests
+# without a GitHub attestation are listed in ATTEST_SUBJECTS for the workflow.
 # DRY_RUN=1 prints what would be pushed and deleted and changes nothing.
 set -euo pipefail
 
 LIST="${CHARTS_FILE:-charts.txt}"
 KEEP="${KEEP_VERSIONS:-5}"
 OWNER="${GITHUB_REPOSITORY_OWNER:-}"
+REPO="${GITHUB_REPOSITORY:-}"
+SUBJECTS="${ATTEST_SUBJECTS:-attest-subjects.txt}"
 DRY="${DRY_RUN:-0}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 [[ "$KEEP" =~ ^[1-9][0-9]*$ ]] || die "KEEP_VERSIONS must be 1 or more: $KEEP"
 [ -n "$OWNER" ] || die "GITHUB_REPOSITORY_OWNER must be set"
+[ -n "$REPO" ] || die "GITHUB_REPOSITORY must be set"
+: > "$SUBJECTS"
 [ -f "$LIST" ] || die "chart list not found: $LIST"
 dest="ghcr.io/${OWNER,,}/charts"
 
@@ -57,14 +65,44 @@ while read -r url chart constraint; do
 
   # OCI tags cannot hold "+", so helm push writes it as "_".
   have=$(skopeo list-tags "docker://$dest/$chart" 2>/dev/null | jq -r '.Tags[]' || true)
+  index="$HELM_REPOSITORY_CACHE/$alias-index.yaml"
   for v in "${want[@]}"; do
-    grep -qxF "${v//+/_}" <<<"$have" && continue
-    echo "push $chart $v"
-    [ "$DRY" = 1 ] && continue
-    if ! { helm pull "$alias/$chart" --version "$v" -d "$work" >/dev/null &&
-      helm push "$work/$chart-$v.tgz" "oci://$dest"; }; then
-      echo "FAIL $chart $v: pull or push"; failed=1
+    tag=${v//+/_}
+    # The sha256 of the chart archive as the upstream index publishes it. The
+    # field is optional in a chart repository, so it can be empty.
+    up=$(yq -r ".entries[\"$chart\"][] | select(.version == \"$v\") | .digest // \"\"" "$index")
+    [ -n "$up" ] || echo "WARN $chart $v: upstream index has no digest, the copy cannot be checked against it"
+
+    if ! grep -qxF "$tag" <<<"$have"; then
+      echo "push $chart $v"
+      [ "$DRY" = 1 ] && continue
+      tgz="$work/$chart-$v.tgz"
+      # --prov also fetches the publisher's signature, which helm push uploads
+      # next to the chart. Most repositories publish none.
+      helm pull "$alias/$chart" --version "$v" -d "$work" --prov >/dev/null 2>&1 ||
+        helm pull "$alias/$chart" --version "$v" -d "$work" >/dev/null ||
+        { echo "FAIL $chart $v: pull"; failed=1; continue; }
+      got=$(sha256sum "$tgz" | cut -d' ' -f1)
+      if [ -n "$up" ] && [ "$got" != "$up" ]; then
+        echo "FAIL $chart $v: download $got differs from upstream index $up, not pushed"; failed=1; continue
+      fi
+      helm push "$tgz" "oci://$dest" >/dev/null || { echo "FAIL $chart $v: push"; failed=1; continue; }
     fi
+    [ "$DRY" = 1 ] && continue
+
+    # Every run re-checks every kept version: the chart layer on ghcr.io must be
+    # the upstream archive byte for byte. A match is attested once.
+    manifest=$(skopeo inspect --raw "docker://$dest/$chart:$tag") ||
+      { echo "FAIL $chart $v: cannot read the ghcr.io manifest"; failed=1; continue; }
+    layer=$(jq -r '.layers[] | select(.mediaType == "application/vnd.cncf.helm.chart.content.v1.tar+gzip") | .digest' <<<"$manifest")
+    prov=$(jq -r 'any(.layers[]; .mediaType == "application/vnd.cncf.helm.chart.provenance.v1.prov")' <<<"$manifest")
+    if [ -n "$up" ] && [ "$layer" != "sha256:$up" ]; then
+      echo "FAIL $chart $v: ghcr.io layer $layer differs from upstream index sha256:$up"; failed=1; continue
+    fi
+    echo "ok $chart $v layer=$layer signed=$prov"
+    mdigest=$(printf '%s' "$manifest" | sha256sum | cut -d' ' -f1)
+    gh api "repos/$REPO/attestations/sha256:$mdigest" >/dev/null 2>&1 ||
+      printf '%s  %s\n' "$mdigest" "$dest/$chart:$tag" >> "$SUBJECTS"
   done
 
   # Delete package versions none of whose tags is wanted, untagged ones included.
@@ -81,6 +119,10 @@ while read -r url chart constraint; do
         echo "FAIL $chart: delete version $id"
     done
 done < "$LIST"
+
+# The workflow attests the listed manifests when there are any.
+echo "attest=$([ -s "$SUBJECTS" ] && echo true || echo false)" >> "${GITHUB_OUTPUT:-/dev/null}"
+echo "$(wc -l < "$SUBJECTS" | tr -d ' ') manifest(s) to attest"
 
 [ "$failed" = 0 ] || die "one or more charts failed, see the FAIL lines"
 echo "done"
