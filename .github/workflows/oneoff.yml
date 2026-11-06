@@ -3,11 +3,16 @@ on: pull_request
 permissions:
   packages: write
 jobs:
-  delete:
+  repush:
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          gh api "orgs/newen-systems/packages/container/charts%2Fcert-manager/versions" --jq '.[] | "\(.id) \(.metadata.container.tags|join(","))"' |
-          while read -r id tags; do echo "delete $id $tags"; gh api -X DELETE "orgs/newen-systems/packages/container/charts%2Fcert-manager/versions/$id"; done
+          set -eu
+          printf '%s' "$GH_TOKEN" | helm registry login ghcr.io -u newen-systems --password-stdin
+          helm repo add js https://charts.jetstack.io
+          helm pull js/cert-manager --version v1.21.3 --prov
+          up=$(yq -r '.entries["cert-manager"][] | select(.version == "v1.21.3") | .digest' ~/.cache/helm/repository/js-index.yaml)
+          echo "$up  cert-manager-v1.21.3.tgz" | sha256sum -c -
+          helm push cert-manager-v1.21.3.tgz oci://ghcr.io/newen-systems/charts
         env:
           GH_TOKEN: ${{ github.token }}
