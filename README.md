@@ -104,7 +104,9 @@ curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
   `1.0.0_abc`. Helm maps it back on pull.
 - Package versions with no wanted tag are deleted through the GitHub packages
   API. A version that drops out of the newest `KEEP_VERSIONS` upstream goes on
-  the next run.
+  the next run. GitHub refuses to delete a public version with more than 5000
+  downloads, so such a version stays and its delete prints a `FAIL` line
+  without failing the run.
 - A failed chart does not stop the others. The run fails at the end and names
   each failure on a `FAIL` line.
 
