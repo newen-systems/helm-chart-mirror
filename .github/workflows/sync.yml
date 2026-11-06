@@ -1,0 +1,42 @@
+name: sync
+on:
+  # Every 6 hours: chart releases are rarely urgent, and a run with nothing new
+  # only downloads the repo indexes.
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: Versions kept per chart
+        default: "5"
+      dry_run:
+        description: Print what would change, change nothing
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  packages: write
+  actions: write # the enable call below
+concurrency:
+  group: sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      # "In a public repository, scheduled workflows are automatically disabled
+      # when no repository activity has occurred in 60 days."
+      # https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
+      # Enabling the workflow again keeps it on without a commit.
+      - name: Keep the schedule enabled
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/sync.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: helm version --short && skopeo --version
+      - run: ./sync.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP_VERSIONS: ${{ inputs.keep || '5' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
