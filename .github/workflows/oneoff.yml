@@ -1,0 +1,13 @@
+name: oneoff
+on: pull_request
+permissions:
+  packages: write
+jobs:
+  delete:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          gh api "orgs/newen-systems/packages/container/charts%2Fcert-manager/versions" --jq '.[] | "\(.id) \(.metadata.container.tags|join(","))"' |
+          while read -r id tags; do echo "delete $id $tags"; gh api -X DELETE "orgs/newen-systems/packages/container/charts%2Fcert-manager/versions/$id"; done
+        env:
+          GH_TOKEN: ${{ github.token }}
