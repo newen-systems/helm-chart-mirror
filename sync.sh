@@ -45,11 +45,14 @@ while read -r url chart constraint; do
     helm repo add "$alias" "$url" >/dev/null || { echo "FAIL $url: helm repo add"; failed=1; continue; }
   fi
 
-  # helm search lists newest first and leaves out pre-releases.
+  # helm search lists newest first and leaves out pre-releases. Some repos
+  # publish one release as both 1.2.3 and v1.2.3: both are kept, and count as
+  # one of the KEEP_VERSIONS releases.
   args=(search repo "$alias/$chart" --versions -o json)
   [ -n "${constraint:-}" ] && args+=(--version "$constraint")
   mapfile -t want < <(helm "${args[@]}" |
-    jq -r --arg n "$alias/$chart" '.[] | select(.name == $n) | .version' | head -n "$KEEP")
+    jq -r --arg n "$alias/$chart" '.[] | select(.name == $n) | .version' |
+    awk -v n="$KEEP" '{ k = $0; sub(/^v/, "", k) } !(k in s) { s[k]; c++ } c <= n')
   [ "${#want[@]}" -gt 0 ] || { echo "FAIL $chart: no versions in $url"; failed=1; continue; }
 
   # OCI tags cannot hold "+", so helm push writes it as "_".
@@ -67,10 +70,10 @@ while read -r url chart constraint; do
   # Delete package versions none of whose tags is wanted, untagged ones included.
   # A package that does not exist yet returns 404 and is skipped.
   keep_tags=$(printf '%s\n' "${want[@]//+/_}" | jq -Rsc 'split("\n") | map(select(. != ""))')
-  { gh api --paginate "$pkg_api/charts%2F$chart/versions" 2>/dev/null || true; } |
-    jq -r --argjson k "$keep_tags" \
+  versions=$(gh api --paginate "$pkg_api/charts%2F$chart/versions" 2>/dev/null) || versions='[]'
+  jq -r --argjson k "$keep_tags" \
       '.[] | select(any(.metadata.container.tags[]; IN($k[])) | not)
-           | "\(.id) \(.metadata.container.tags | join(","))"' |
+           | "\(.id) \(.metadata.container.tags | join(","))"' <<<"$versions" |
     while read -r id tags; do
       echo "delete $chart ${tags:-<untagged>}"
       [ "$DRY" = 1 ] && continue
