@@ -1,0 +1,19 @@
+# <registry>/<path>:<tag>, copied to ghcr.io/<owner>/<path>:<tag> with the same digest.
+# Only images on registries the work proxy blocks belong here.
+# GitLab Operator 3.5.3 and the GitLab chart 10.5.4 (GitLab 19.5.3) it installs by default.
+registry.gitlab.com/gitlab-org/cloud-native/gitlab-operator:3.5.3
+registry.gitlab.com/gitlab-org/build/cng/certificates:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/cfssl-self-sign:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/gitaly:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/gitlab-base:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/gitlab-container-registry:v4.42.0-gitlab
+registry.gitlab.com/gitlab-org/build/cng/gitlab-exporter:17.0.2
+registry.gitlab.com/gitlab-org/build/cng/gitlab-kas:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/gitlab-shell:v14.58.0
+registry.gitlab.com/gitlab-org/build/cng/gitlab-sidekiq-ee:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/gitlab-toolbox-ee:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/gitlab-webservice-ee:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/gitlab-workhorse-ee:v19.5.3
+registry.gitlab.com/gitlab-org/build/cng/kubectl:v19.5.3
+registry.gitlab.com/gitlab-org/gitlab-runner:alpine-v19.5.1
+registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v19.5.1

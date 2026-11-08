@@ -1,19 +1,21 @@
-# <repo-url> <chart> [<semver-constraint>]
+# <repo-url> <path> [<semver-constraint>]
 # The newest KEEP_VERSIONS stable versions that match the constraint are mirrored to
-# ghcr.io/<owner>/charts/<chart>. A chart's repo URL is on its Artifact Hub page,
+# ghcr.io/<owner>/<path>. A chart's repo URL is on its Artifact Hub page,
 # under INSTALL ("helm repo add <name> <url>").
-https://charts.rook.io/release rook-ceph
-https://charts.rook.io/release rook-ceph-cluster
-https://charts.jetstack.io cert-manager
-# Work cluster charts (2026-11-09). Only charts with no official OCI copy on
-# a whitelisted registry (ghcr.io, quay.io, docker.io, Red Hat) belong here.
-# velero is at ghcr.io/vmware-tanzu/charts, metallb at quay.io/metallb/chart.
+# <path> is the upstream project path ending in the chart name, so a reader of
+# ghcr.io/<owner>/<path> can tell where the chart came from.
+# Only charts with no official OCI copy on a registry the work proxy allows
+# (ghcr.io, quay.io, docker.io, Red Hat) belong here. Pull these from upstream:
+#   rook-ceph, rook-ceph-cluster  ghcr.io/rook/<chart>
+#   cert-manager                  quay.io/jetstack/charts/cert-manager
+#   velero                        ghcr.io/vmware-tanzu/charts/velero
+#   metallb                       quay.io/metallb/chart/metallb
 # A "~X.Y" constraint keeps the pinned work version inside the mirrored window.
-https://kubernetes.github.io/ingress-nginx ingress-nginx ~4.14
-https://mysql.github.io/mysql-operator mysql-operator
-https://mysql.github.io/mysql-operator mysql-innodbcluster
-https://helm.ngc.nvidia.com/nvidia gpu-operator ~26.3
-https://releases.rancher.com/server-charts/stable rancher ~2.15
-https://charts.js.wiki wiki ~2.2
-https://vllm-project.github.io/production-stack vllm-stack ~0.1
-https://charts.gitlab.io gitlab-operator
+https://kubernetes.github.io/ingress-nginx kubernetes/ingress-nginx/charts/ingress-nginx ~4.14
+https://mysql.github.io/mysql-operator mysql/mysql-operator/charts/mysql-operator
+https://mysql.github.io/mysql-operator mysql/mysql-operator/charts/mysql-innodbcluster
+https://helm.ngc.nvidia.com/nvidia nvidia/charts/gpu-operator ~26.3
+https://releases.rancher.com/server-charts/stable rancher/charts/rancher ~2.15
+https://charts.js.wiki requarks/charts/wiki ~2.2
+https://vllm-project.github.io/production-stack vllm-project/production-stack/charts/vllm-stack ~0.1
+https://charts.gitlab.io gitlab-org/charts/gitlab-operator
