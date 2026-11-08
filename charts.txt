@@ -6,13 +6,14 @@ https://charts.rook.io/release rook-ceph
 https://charts.rook.io/release rook-ceph-cluster
 https://charts.jetstack.io cert-manager
 # Work cluster charts (2026-11-09). Only charts with no official OCI copy on
-# ghcr.io belong here (velero is at ghcr.io/vmware-tanzu/charts).
+# a whitelisted registry (ghcr.io, quay.io, docker.io, Red Hat) belong here.
+# velero is at ghcr.io/vmware-tanzu/charts, metallb at quay.io/metallb/chart.
 # A "~X.Y" constraint keeps the pinned work version inside the mirrored window.
 https://kubernetes.github.io/ingress-nginx ingress-nginx ~4.14
 https://mysql.github.io/mysql-operator mysql-operator
 https://mysql.github.io/mysql-operator mysql-innodbcluster
 https://helm.ngc.nvidia.com/nvidia gpu-operator ~26.3
-https://metallb.github.io/metallb metallb ~0.15
 https://releases.rancher.com/server-charts/stable rancher ~2.15
 https://charts.js.wiki wiki ~2.2
 https://vllm-project.github.io/production-stack vllm-stack ~0.1
+https://charts.gitlab.io gitlab-operator
