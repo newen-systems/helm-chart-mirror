@@ -1,8 +1,11 @@
 # helm-chart-mirror
 
-Republishes Helm charts from HTTP chart repositories as OCI artifacts on
-`ghcr.io/<owner>/charts/<chart>`, for networks that reach ghcr.io but not the
-chart repositories.
+Republishes Helm charts from HTTP chart repositories as OCI artifacts, and
+container images from registries a client cannot reach, on
+`ghcr.io/<owner>/<source path>`, for networks that reach ghcr.io but not the
+upstream. The upstream path stays in the name, so
+`ghcr.io/<owner>/gitlab-org/build/cng/gitaly` reads as a copy of
+`registry.gitlab.com/gitlab-org/build/cng/gitaly`.
 
 ## Requirements
 
@@ -17,10 +20,11 @@ chart repositories.
 | Req | Name | Default | Purpose |
 |---|---|---|---|
 | Optional | `CHARTS_FILE` | `charts.txt` | Chart list |
+| Optional | `IMAGES_FILE` | `images.txt` | Image list |
 | Optional | `KEEP_VERSIONS` | `5` | Versions kept per chart, newest first. The workflow's `keep` input sets it on a manual run |
 | Optional | `DRY_RUN` | `0` | `1` prints what would be pushed and deleted and changes nothing |
 | Optional | `ATTEST_SUBJECTS` | `attest-subjects.txt` | Output: verified manifests that have no attestation yet, in `sha256sum` format |
-| Required | `GITHUB_REPOSITORY_OWNER` | set by Actions | Owner of the `charts/*` packages |
+| Required | `GITHUB_REPOSITORY_OWNER` | set by Actions | Owner of the mirrored packages |
 | Required | `GITHUB_REPOSITORY` | set by Actions | `<owner>/<repo>` the attestations belong to |
 | Required | `GH_TOKEN` | set by the workflow | Token with `packages: write`. Also the ghcr.io login |
 
@@ -28,42 +32,49 @@ chart repositories.
 
 1. Find the chart on [Artifact Hub](https://artifacthub.io). Its INSTALL panel
    shows `helm repo add <name> <url>`. Take the URL.
-2. Add a line to `charts.txt`: `<url> <chart> [<semver-constraint>]`, for
-   example `https://charts.jetstack.io cert-manager` or
-   `https://charts.rook.io/release rook-ceph ~1.17` to stay on 1.17.x.
+2. Add a line to `charts.txt`: `<url> <path> [<semver-constraint>]`. `<path>`
+   is the upstream project path ending in the chart name, for example
+   `https://kubernetes.github.io/ingress-nginx kubernetes/ingress-nginx/charts/ingress-nginx ~4.14`
+   to stay on 4.14.x.
 3. Merge. The next run, or **Actions > sync > Run workflow**, pushes it.
 
 A chart that is already published as OCI on a registry the client reaches
-(ghcr.io, quay.io) needs no mirror. Pull it from there.
+(ghcr.io, quay.io, docker.io, Red Hat) needs no mirror. Pull it from there.
+
+## Add an image
+
+Add `<registry>/<path>:<tag>` to `images.txt`. It is copied with every
+architecture and the same digest to `ghcr.io/<owner>/<path>:<tag>`. Images are
+not pruned: removing a line leaves the package in place.
 
 ## Usage
 
 The packages are public, so pulling needs no login:
 
 ```sh
-helm show chart oci://ghcr.io/<owner>/charts/rook-ceph --version v1.18.0
-helm install rook-ceph oci://ghcr.io/<owner>/charts/rook-ceph --version v1.18.0
+helm show chart oci://ghcr.io/<owner>/rancher/charts/rancher --version 2.15.1
+helm install rancher oci://ghcr.io/<owner>/rancher/charts/rancher --version 2.15.1
 ```
 
 To copy a chart into another registry, treat it as an image reference:
-`skopeo copy docker://ghcr.io/<owner>/charts/rook-ceph:v1.18.0 docker://<registry>/<path>:v1.18.0`.
+`skopeo copy docker://ghcr.io/<owner>/rancher/charts/rancher:2.15.1 docker://<registry>/rancher/charts/rancher:2.15.1`.
 
 ## Verify a chart
 
 Three independent checks, none of which trusts this repository:
 
 ```sh
-ref=ghcr.io/<owner>/charts/cert-manager:v1.21.3
+ref=ghcr.io/<owner>/requarks/charts/wiki:2.2.24
 # 1. The chart layer is the upstream archive byte for byte. Compare with the
 #    digest field of that version in the upstream index.yaml.
 skopeo inspect --raw docker://$ref |
   jq -r '.layers[] | select(.mediaType | endswith("chart.content.v1.tar+gzip")).digest'
-curl -fsSL https://charts.jetstack.io/index.yaml |
-  yq '.entries.cert-manager[] | select(.version == "v1.21.3") | .digest'
+curl -fsSL https://charts.js.wiki/index.yaml |
+  yq '.entries.wiki[] | select(.version == "2.2.24") | .digest'
 # 2. This repository's workflow published it, signed through Sigstore.
 gh attestation verify oci://$ref --repo <owner>/helm-chart-mirror
 # 3. Where the publisher signs its charts, their signature was copied with it.
-helm pull oci://${ref%:*} --version v1.21.3 --verify --keyring <publisher-key>.gpg
+helm pull oci://${ref%:*} --version 2.2.24 --verify --keyring <publisher-key>.gpg
 ```
 
 Check 1 needs a host that reaches the upstream index. Check 2 needs github.com.
