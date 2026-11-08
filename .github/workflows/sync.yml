@@ -25,7 +25,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 120 # the first copy of multi-arch GitLab images is large
     steps:
       # "In a public repository, scheduled workflows are automatically disabled
       # when no repository activity has occurred in 60 days."

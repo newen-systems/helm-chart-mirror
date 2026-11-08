@@ -24,7 +24,7 @@ upstream. The upstream path stays in the name, so
 | Optional | `KEEP_VERSIONS` | `5` | Versions kept per chart, newest first. The workflow's `keep` input sets it on a manual run |
 | Optional | `DRY_RUN` | `0` | `1` prints what would be pushed and deleted and changes nothing |
 | Optional | `ATTEST_SUBJECTS` | `attest-subjects.txt` | Output: verified manifests that have no attestation yet, in `sha256sum` format |
-| Required | `GITHUB_REPOSITORY_OWNER` | set by Actions | Owner of the `charts/*` packages |
+| Required | `GITHUB_REPOSITORY_OWNER` | set by Actions | Owner of the mirrored packages |
 | Required | `GITHUB_REPOSITORY` | set by Actions | `<owner>/<repo>` the attestations belong to |
 | Required | `GH_TOKEN` | set by the workflow | Token with `packages: write`. Also the ghcr.io login |
 
