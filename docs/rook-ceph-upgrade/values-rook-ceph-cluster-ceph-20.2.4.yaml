@@ -1,0 +1,13 @@
+# rook-ceph-cluster: Ceph Tentacle v20.2.4 from the work registry plus the
+# CVE-2025-30156 CephX key rotation. Apply only in the final Ceph step (runbook step 6).
+# Do not also set cephClusterSpec.cephVersion. The chart already disables the rook
+# mgr module (Rook's advice before Tentacle); keep that if you override mgr.modules.
+cephImage:
+  repository: REGISTRY/ceph/ceph
+  tag: v20.2.4   # same digest as v20.2.4-20260818
+cephClusterSpec:
+  security:
+    cephx:
+      daemon:
+        keyRotationPolicy: KeyGeneration
+        keyGeneration: 2

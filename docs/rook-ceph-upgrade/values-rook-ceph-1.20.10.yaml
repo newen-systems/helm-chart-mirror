@@ -1,0 +1,20 @@
+# rook-ceph chart 1.20.10 (tag v1.20.10): every image from the work registry.
+# Replace REGISTRY with the work Quay prefix (for example quay.example.com/team).
+# Tags and the list come from rook/rook deploy/examples/images.txt at v1.20.10.
+image:
+  repository: REGISTRY/rook/ceph
+  tag: v1.20.10
+ceph-csi-operator:
+  controllerManager:
+    manager:
+      image:
+        repository: REGISTRY/cephcsi/ceph-csi-operator
+        tag: v1.0.4
+csi:
+  cephcsi:     {repository: REGISTRY/cephcsi/cephcsi, tag: v3.17.1}
+  registrar:   {repository: REGISTRY/sig-storage/csi-node-driver-registrar, tag: v2.17.0}
+  provisioner: {repository: REGISTRY/sig-storage/csi-provisioner, tag: v6.2.0}
+  snapshotter: {repository: REGISTRY/sig-storage/csi-snapshotter, tag: v8.5.0}
+  attacher:    {repository: REGISTRY/sig-storage/csi-attacher, tag: v4.12.0}
+  resizer:     {repository: REGISTRY/sig-storage/csi-resizer, tag: v2.1.0}
+  csiAddons:   {repository: REGISTRY/csiaddons/k8s-sidecar, tag: v0.14.0}
