@@ -1,0 +1,7 @@
+# rook-ceph-cluster during the Rook operator steps: keep Ceph where it is.
+# The chart's default Ceph image moves with the chart (1.19.12 -> v19.2.6,
+# 1.21.2 -> v20.2.4), so an unpinned helm upgrade also upgrades Ceph.
+# Set the tag to the version running now: kubectl -n rook-ceph get cephcluster -o jsonpath='{.items[0].spec.cephVersion.image}'
+cephImage:
+  repository: REGISTRY/ceph/ceph
+  tag: CURRENT_CEPH_TAG
