@@ -19,3 +19,5 @@ https://releases.rancher.com/server-charts/stable rancher/charts/rancher ~2.15
 https://charts.js.wiki requarks/charts/wiki ~2.2
 https://vllm-project.github.io/production-stack vllm-project/production-stack/charts/vllm-stack ~0.1
 https://charts.gitlab.io gitlab-org/charts/gitlab-operator
+https://ceph.github.io/ceph-csi-operator ceph/ceph-csi-operator/charts/ceph-csi-drivers ~1.1
+https://ceph.github.io/ceph-csi-operator ceph/ceph-csi-operator/charts/ceph-csi-operator ~1.1
